@@ -39,11 +39,11 @@ $ sudo insmod dmp.ko
 ```shell
 # create underlying block device
 # table format: "logical_start_sector num_sectors target_type target_args"
-$ dmsetup create zero1 --table "0 1024 zero"
+$ sudo dmsetup create zero1 --table "0 1024 zero"
 
 # create dmp device
 # note: num_sectors should be equal to the num_sectors of the underlying device
-$ dmsetup create dmp1 --table "0 1024 dmp /dev/mapper/zero1"
+$ sudo dmsetup create dmp1 --table "0 1024 dmp /dev/mapper/zero1"
 ```
 
 *Note*: if you create multiple dmp devices, the statistics will be shared among them.
@@ -54,14 +54,14 @@ You can now access and interact with the statistics via `sysfs` of the module:
 # show statistics
 $ cat /sys/module/dmp/stat/volumes
 read:
- reqs: 176
+ reqs: 44
  avg size: 4096
 write:
- reqs: 7
- avg size: 1024
+ reqs: 0
+ avg size: 0
 total:
- reqs: 183
- avg size: 3978
+ reqs: 44
+ avg size: 4096
 
 # reset statistics
 $ sudo bash -c "echo 1 > /sys/module/dmp/stat/reset"
@@ -82,16 +82,17 @@ total:
 You can check consistency with `sys/block/{name}/stat` using `dmp_check.py` (pass dmp devices names as arguments):
 
 ```shell
+$ sudo dd if=/dev/zero of=/dev/mapper/dmp1 oflag=direct bs=512 count=1
 $ python3 dmp_check.py dm-1
 read:
- reqs: 132
+ reqs: 88
  avg size: 4096
 write:
  reqs: 1
  avg size: 512
 total:
- reqs: 133
- avg size: 4069
+ reqs: 89
+ avg size: 4055
 
 correct
 
@@ -99,19 +100,25 @@ correct
 $ sudo dd if=/dev/zero of=/dev/mapper/dmp1 bs=4K count=1
 $ python3 dmp_check.py dm-1
 read:
- reqs: 177
+ reqs: 132
  avg size: 4096
 write:
  reqs: 2
  avg size: 2304
 total:
- reqs: 179
- avg size: 4075
+ reqs: 134
+ avg size: 4069
 
 correct
 ```
 
 Recommended usage: check consistency after generating IO load on devices.
+
+*Note*: you can can determine the name of the device by using:
+```shell
+$ ls -al /dev/mapper/*
+lrwxrwxrwx 1 root root       7 Feb  1 17:22 /dev/mapper/dmp1 -> ../dm-1
+```
 
 *Note*: make sure to specify all dmp devices that you have created.
 
@@ -120,10 +127,10 @@ Recommended usage: check consistency after generating IO load on devices.
 ## Clean
 ```shell
 # remove underlying block device
-$ dmsetup remove zero1
+$ sudo dmsetup remove zero1
 
 # remove dmp device
-$ dmsetup remove dmp1
+$ sudo dmsetup remove dmp1
 
 $ sudo rmmod dmp
 
